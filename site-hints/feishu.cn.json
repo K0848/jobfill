@@ -1,0 +1,332 @@
+{
+  "schemaVersion": 1,
+  "domain": "feishu.cn",
+  "description": "飞书招聘表单。包含 larkoffice 的 ud__select 和 ATSX（atsx-*）两类控件知识。",
+  "aliases": {
+    "college": [
+      "二级学院全称"
+    ],
+    "gpa": [
+      "绩点"
+    ],
+    "awardName": [
+      "获奖名称"
+    ],
+    "description": [
+      "描述"
+    ]
+  },
+  "recordBinding": {
+    "recordBoundary": "动态经历卡片容器",
+    "identity": "优先使用学校、公司或项目名称的明确 identity；不按卡片 DOM 顺序绑定。"
+  },
+  "playbooks": {
+    "array-card-field-read": {
+      "description": "larkoffice（ud__*）动态经历卡片的字段定位与读取",
+      "steps": [
+        {
+          "action": "scope_by_formily",
+          "rule": "字段必须取 `[data-form-field-id]` 且 class 含 `formily-item` 的节点。同名字段在 DOM 里存在**嵌套重复**（外层 formily-item 容器 + 内层 ud__native-input 也带同 data-form-field-id），直接 querySelectorAll 会返回 2N 条，做索引写入极易错位。"
+        },
+        {
+          "action": "scope_by_card",
+          "rule": "通过当前可见的卡片容器和明确记录身份定位字段，不依赖固定索引。"
+        },
+        {
+          "action": "read_value",
+          "rule": "自绘下拉读 `.ud__select__selector__content` 文本（input.value 恒空）；textarea 读 `.value`；普通 input 读 `.value`。"
+        },
+        {
+          "action": "empty_card_shape",
+          "rule": "作品区可能是文件上传控件，不能当作链接字段；未确认的卡片和附件交由用户处理。"
+        }
+      ]
+    },
+    "section-add-button": {
+      "description": "按节根容器定位「添加」按钮（行内型/列表型两种布局都适用）",
+      "steps": [
+        {
+          "action": "find_section",
+          "rule": "`[...document.querySelectorAll('[class*=applyFormModuleWrapper]')]` 中取 `applyFormModuleWrapper-title` 文本等于节名的容器。注意 `applyFormModuleWrapper` 本身作为 class token 不存在，必须用 `[class*=]`。"
+        },
+        {
+          "action": "click_add",
+          "rule": "在该容器内找文本为「添加」的 button 并 `.click()`。新建卡片后节内字段索引会变化，必须重新扫描，不要沿用旧 index。"
+        },
+        {
+          "action": "pitfall",
+          "rule": "**不要给按钮打 data-jf 标记后跨渲染复用**：页面 re-render 会丢标记，后续按标记查找返回 null（实测报 nobtn）。每次重新按节容器定位。"
+        }
+      ]
+    },
+    "ud-select-popup": {
+      "description": "飞书弹出选择器（portal 可能复用或残留 opacity=0）",
+      "steps": [
+        {
+          "action": "check_viewport",
+          "scroll": "仅当字段离开视口时"
+        },
+        {
+          "action": "snapshot",
+          "before": "记录已存在弹层和所有节点"
+        },
+        {
+          "action": "pointer_sequence",
+          "target": ".ud__select__selector__placeholder or input",
+          "events": [
+            "pointerenter",
+            "mouseover",
+            "mousemove",
+            "pointerdown",
+            "pointerup",
+            "click"
+          ]
+        },
+        {
+          "action": "wait",
+          "for": "新增弹层",
+          "filter": "opacity>=0.02 && pointerEvents!=none && 在视口内"
+        },
+        {
+          "action": "verify",
+          "evidence": "aria-controls 或文本与视口位置唯一性"
+        },
+        {
+          "action": "select",
+          "from": "[role=option], li, [data-value]",
+          "match": "选项文本唯一"
+        },
+        {
+          "action": "readback",
+          "from": ".ud__select__selector__content"
+        }
+      ]
+    },
+    "date-range-picker": {
+      "description": "throne-biz-date-range-picker（受控表单会替换节点）",
+      "precondition": "MD 提供 {start: YYYY-MM, end: YYYY-MM} 且 start <= end",
+      "steps": [
+        {
+          "action": "fill",
+          "target": "第一个 input",
+          "value": "start"
+        },
+        {
+          "action": "refetch",
+          "reason": "受控表单可能替换内部 input"
+        },
+        {
+          "action": "fill",
+          "target": "第二个 input",
+          "value": "end"
+        },
+        {
+          "action": "readback",
+          "value": "inputs[0].value + inputs[1].value",
+          "check": "无 aria-invalid / .ud-formily-item-feedback"
+        }
+      ]
+    },
+    "atsx-select": {
+      "description": "ATSX 单选下拉（.atsx-select / .atsx-select-selection-selected-value / 弹层 .atsx-select-dropdown + .atsx-select-dropdown-menu-item）",
+      "steps": [
+        {
+          "action": "enumerate_options_before_click",
+          "target": ".atsx-select-dropdown-menu .atsx-select-dropdown-menu-item",
+          "note": "未打开的下拉选项**已经渲染在 DOM**（容器带 atsx-select-dropdown-hidden），可以直接 eval 枚举，不必逐个点开"
+        },
+        {
+          "action": "click",
+          "target": "combobox",
+          "by": "find {role:'combobox', name:'<字段名或当前值>'}"
+        },
+        {
+          "action": "click",
+          "target": "option",
+          "by": "find {role:'option', name:'<选项原文>'}",
+          "note": "选项 role=option，名字就是选项文本，比 CSS 稳"
+        },
+        {
+          "action": "readback",
+          "value": "snapshot 中该 combobox 的 name 是否已变成选中值",
+          "check": "顶部校验提示里该字段的「请选择…」消失"
+        }
+      ]
+    },
+    "atsx-tree-select": {
+      "description": "ATSX 多选树（.atsx-select-tree-dropdown + .atsx-select-tree-node-content-wrapper + .atsx-select-tree-checkbox），如「期望工作地点」= 国家/地区 → 省 → 市",
+      "precondition": "字段 label 与顶层节点语义一致（顶层通常是国家/地区，不是城市）",
+      "steps": [
+        {
+          "action": "click",
+          "target": "combobox"
+        },
+        {
+          "action": "readback",
+          "from": "可见 .atsx-select-dropdown 的 textContent",
+          "note": "树**只在打开时渲染**，不能像普通下拉那样预先枚举；顶层节点是折叠的，市一级要逐级展开"
+        },
+        {
+          "action": "verify",
+          "evidence": "选中值出现在 .atsx-select-selection-selected-value 或该 combobox 的 name"
+        },
+        {
+          "action": "close",
+          "key": "Escape"
+        }
+      ]
+    },
+    "atsx-date": {
+      "description": "ATSX 日期输入（placeholder YYYY-MM-DD / YYYY-MM，data-cy 形如 education[0].<数字ID>Input）",
+      "precondition": "先判断页面要求的日期精度；资料不足时请用户确认，不自行补全未知日期。",
+      "steps": [
+        {
+          "action": "check_precision",
+          "rule": "页面要求的日期精度高于资料时，先取得用户确认；不要自行补全未知日期。"
+        },
+        {
+          "action": "fill",
+          "rule": "仅在资料精度足够或用户确认处理方式后填写，并核验显示值。"
+        },
+        {
+          "action": "readback",
+          "value": "input.value",
+          "check": "无 has-error"
+        },
+        {
+          "action": "report",
+          "status": "attempted",
+          "requiresUserCheck": true,
+          "note": "占位日在报告中标注为用户待核"
+        },
+        {
+          "action": "forbidden",
+          "rule": "占位日不是真实日期，**不得回写长期资料**；长期资料继续保留年月精度"
+        }
+      ]
+    },
+    "atsx-year-picker": {
+      "description": "ATSX 只到「年」精度的日期控件（input placeholder 为 YYYY，外层 .atsx-date-picker，无 period-month 后缀）",
+      "steps": [
+        {
+          "action": "click",
+          "target": "input[placeholder=YYYY]",
+          "note": "必须派发完整指针序列 pointerdown/mousedown/pointerup/mouseup/click；单纯 .click() 不开面板"
+        },
+        {
+          "action": "readback_panel",
+          "from": "可见的 .atsx-date-picker-panel",
+          "check": ".atsx-date-picker-panel-body 的 class 含 atsx-date-picker-panel-body-year，header 形如 2018-2026"
+        },
+        {
+          "action": "click",
+          "target": "面板内 [data-cy=\"<年份>\"] 且 class 含 cell-content",
+          "note": "点中后面板立即关闭，input.value 变成 4 位年份"
+        },
+        {
+          "action": "readback",
+          "value": "input.value",
+          "check": "无 has-error"
+        }
+      ],
+      "pitfall": "**type/fill 直写 input.value 会「看着写进去了」但 React 模型不更新**：下一次表单 re-render（例如去填另一个字段）会把值回滚成空。必须走面板选年份。实测：先 type 2026-04 读回成功，随后填第二个获奖时间时被清空。",
+      "report": {
+        "status": "attempted",
+        "requiresUserCheck": true,
+        "note": "资料精度高于控件精度（如资料 2026-04 → 控件只能存 2026），在报告中标注"
+      }
+    },
+    "atsx-period-month": {
+      "description": "ATSX 年月区间只读展示控件（.atsx-date-picker-period-month，值在 span 而非 input）",
+      "steps": [
+        {
+          "action": "readback",
+          "from": "[data-cy=year] 与 [data-cy=month] 的文本成对取值",
+          "note": "**不要读 input.value**：该控件没有 input，读 input.value 得到空串，会把已填好的起止时间误判成未填（教育/实习/项目的起止时间都是这一类）"
+        }
+      ]
+    },
+    "larkoffice-react-write": {
+      "description": "larkoffice（ud__*）租户的受控文本/textarea/年月 input 直写路径与多卡片定位",
+      "steps": [
+        {
+          "action": "write_native",
+          "rule": "受控 input/textarea 用 native setter + 派发 input/change/blur 即可被 React 接受：`Object.getOwnPropertyDescriptor(el.constructor.prototype,'value').set.call(el,v)`（textarea 用 HTMLTextAreaElement.prototype）。**换一个无关字段或点「翻译」触发 re-render 后值仍在**，说明已进 React state。无需先聚焦、无需真实键盘。"
+        },
+        {
+          "action": "scope_by_section",
+          "rule": "按节取卡片：`hdr=[...document.querySelectorAll('[class*=applyFormModuleWrapper-title]')].find(e=>e.innerText.trim()===节名)`，再向上爬父节点直到 `className` 含 `applyFormModuleWrapper__`（该后缀容器才是节根）。注意同一节有多个嵌套 wrapper：`-left`(标题)、`-windows`(节内所有卡片)。用 `-windows` 那一层取卡片，否则 `querySelectorAll` 拿不全。"
+        },
+        {
+          "action": "date_range_inputs",
+          "rule": "教育/实习/项目的起止时间是 `start_end_time` 字段下的**两个独立月精度 input**（无 placeholder、非 range 控件），直接各写一次 native setter 即可，两个值都会保留。中文输入法组合不会截断（实测跨渲染读回一致）。"
+        },
+        {
+          "action": "count_cards",
+          "rule": "卡片总数用 `document.querySelectorAll('[class*=apply-form-array-card__]').length`；按节取用节根内的 `[class*=apply-form-array-card]` 并过滤 `className.includes('apply-form-array-card__')`（`[class*=]` 会同时命中 `-card-container` 之类的父层，必须再过滤）。"
+        }
+      ],
+      "pitfall": "**同名字段在 DOM 里嵌套重复**：外层 formily-item 与内层 input 都可能带同 `data-form-field-id`，`querySelectorAll('[data-form-field-id=\"name\"]')` 会返回 2N 条（实测 name 12 条 = 6 个位置 × 2 层）。做索引写入前必须先过滤 `className.includes('formily-item')`，否则错位。"
+    },
+    "larkoffice-select": {
+      "description": "larkoffice 的 ud__select 自绘下拉（含弹层残留与同页多弹层）",
+      "steps": [
+        {
+          "action": "open",
+          "rule": "对字段内 `.ud__select__selector__placeholder`（无 placeholder 时退到 `.ud__select__selector`）派发完整指针序列 pointerenter/mouseenter/pointerover/mouseover/mousemove/pointerdown/mousedown/pointerup/mouseup/click，带 rect 中心坐标。打开后字段内 `.ud__select` 会出现 `ud__select__selector-open`。"
+        },
+        {
+          "action": "find_popup",
+          "rule": "`.ud__select__dropdown` 是全页共用的 portal 池：**同页所有下拉的弹层都常驻 DOM**，未展开的那份 `opacity:0` 但 `width>0`、`innerText` 完整。因此**不能用 `drops[drops.length-1]` 或「第一个可见的」**，要按弹层内选项文本集匹配目标字段（如含「入门/日常会话/商务会话/无障碍沟通/母语」的才是精通程度）。"
+        },
+        {
+          "action": "select_option",
+          "rule": "选项取 `.ud__select__list__item`（**不是** `[role=option]`，后者会把 nav 等页面上其他 role=option 节点也算进来，实测「英语」匹配到 2 条）。派发完整指针序列点击，`.click()` 单独用不可靠。"
+        },
+        {
+          "action": "readback",
+          "rule": "读 `[id=\"formily-item-<fieldId>\"] .ud__select__selector__content` 的 innerText（**不要读 input.value，恒空**）。占位符 `.ud__select__selector__placeholder` 为空串即表示已选中。"
+        }
+      ]
+    },
+    "atsx-tree-region": {
+      "description": "ATSX 单选地区树（国家/地区 → 省 → 市），如「所在地」「家乡」（id 形如 current_city_code / hometown_city_code）",
+      "steps": [
+        {
+          "action": "click",
+          "target": "[id=\"<fieldId>\"] .atsx-select-selection",
+          "note": "完整指针序列；未展开时下拉里只有 248 个国家/地区"
+        },
+        {
+          "action": "expand",
+          "target": "li > .atsx-tree-switcher",
+          "note": "顶层「中国大陆」默认折叠，先点它的 switcher 才看得到省"
+        },
+        {
+          "action": "expand_again",
+          "target": "目标省级节点的 .atsx-tree-switcher"
+        },
+        {
+          "action": "select",
+          "target": "目标节点的 .atsx-tree-node-content-wrapper",
+          "note": "点标题即选中并关闭；父节点（如「中国大陆」）也可直接选中"
+        },
+        {
+          "action": "readback",
+          "from": "[id=\"<fieldId>\"] .atsx-select-selection-selected-value",
+          "check": "显示实际选中的目标值"
+        }
+      ],
+      "pitfalls": [
+        "选项文本必须取 `.atsx-tree-node-content-wrapper`；直接取 li.textContent 会把整棵子树文字连成一串（如「中国大陆安徽北京重庆…」）",
+        "li.click() 无效，必须派发 pointerdown/mousedown/pointerup/mouseup/click",
+        "控件只到「市」级，长期资料里的「区」无法体现；市级值足以通过校验"
+      ]
+    }
+  },
+  "knownIssues": [
+    "简历解析结果可能错位或截断，应按字段语义和记录身份对照资料。",
+    "受控输入框可能在重渲染后回滚；以控件最终显示值和页面校验为准。",
+    "日期精度与资料不同时，应先取得用户确认，不能将占位日期当成真实事实。"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "url": "https://example.test/apply",
+  "profilePath": "data/profile.md",
+  "snapshotHint": {
+    "tabId": 123
+  },
+  "plannedFields": [
+    {
+      "label": "姓名",
+      "sourceKey": "profile.basic.name",
+      "value": "示例姓名",
+      "selector": "#name",
+      "tagName": "INPUT",
+      "type": "text",
+      "matchMode": "exact"
+    }
+  ]
+}

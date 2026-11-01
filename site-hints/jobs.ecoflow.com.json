@@ -1,0 +1,245 @@
+{
+  "schemaVersion": 1,
+  "domain": "jobs.ecoflow.com",
+  "description": "正浩创新（EcoFlow）校园招聘投递页。底层是飞书招聘（larkoffice）租户，控件家族与 site-hints/feishu.cn.json 的 ud__select 一致，可直接套用其 ud-select-popup playbook。",
+  "aliases": {
+    "degree": [
+      "学历"
+    ],
+    "school": [
+      "学校名称"
+    ],
+    "major": [
+      "专业"
+    ],
+    "start": [
+      "起止时间"
+    ],
+    "company": [
+      "公司名称"
+    ],
+    "role": [
+      "职位名称"
+    ],
+    "description": [
+      "描述"
+    ],
+    "projectName": [
+      "项目名称"
+    ],
+    "projectRole": [
+      "项目角色"
+    ],
+    "projectLink": [
+      "项目链接"
+    ],
+    "awardName": [
+      "获奖名称"
+    ],
+    "awardDate": [
+      "获奖时间"
+    ],
+    "language": [
+      "语言"
+    ],
+    "proficiency": [
+      "精通程度"
+    ],
+    "selfEvaluation": [
+      "自我评价"
+    ]
+  },
+  "structure": {
+    "fieldAnchor": "每个字段容器带 data-form-field-id（如 name / mobile / email / school / degree / field_of_study / start_end_time / company / title / desc / language / proficiency）。**同名属性在页面里会出现多次**（两条教育记录各有一个 degree / school / field_of_study / start_end_time），querySelector 只会拿到第一条，必须按索引或所在经历卡片定位。",
+    "sectionAnchor": "节的根容器 class 形如 `applyFormModuleWrapper-windows applyFormModuleWrapper__<hash>`（注意：`.applyFormModuleWrapper` 这个 class token **不存在**，`[class*=\"applyFormModuleWrapper\"]` 才匹配）。节名在子节点 `[class*=\"applyFormModuleWrapper-title\"]` 的 textContent。按节定位一切元素的可靠写法：`[...document.querySelectorAll('[class*=\"applyFormModuleWrapper\"]')].find(w => (w.querySelector('[class*=\"applyFormModuleWrapper-title\"]')||{}).textContent?.trim() === '获奖' && w.querySelector('button'))`。",
+    "degreeOptions": [
+      "博士",
+      "MBA",
+      "硕士",
+      "本科",
+      "大专",
+      "高中",
+      "专职",
+      "初中",
+      "小学"
+    ],
+    "languageOptions": [
+      "英语",
+      "法语",
+      "日语",
+      "韩语",
+      "德语",
+      "俄语",
+      "西班牙语",
+      "葡萄牙语",
+      "阿拉伯语"
+    ],
+    "proficiencyOptions": [
+      "入门",
+      "日常会话",
+      "商务会话",
+      "无障碍沟通",
+      "母语"
+    ],
+    "optionNode": "可见弹层内 .ud__select__list__item（外层可点节点，内层 .ud__select__list__item__content 不可点）；另有 .ud__select__list__item-active 表示键盘高亮项，不代表已选中。**已选中的项会同时带 .ud__select__list__item-selected，点它前不要误判为「已填过」。**",
+    "readback": "字段容器内 .ud__select__selector__content 的 textContent 才是选中值；snapshot 里 combobox 的 accessible name 常为空，不能据此判断未填。input.value 对 ud__select 恒为空，全量读回时必须额外取 selector__content 的文本。",
+    "dateRange": "起止时间用两个 input（YYYY-MM 精度），受控表单会替换内部节点，写完需重新取值。",
+    "dateControlTypes": "**同页混用三种日期控件，动手前必须先探类型**：(1) 教育经历 / 实习经历的「起止时间」= `throne-biz-date-range-picker`，受控范围控件，**type/fill 直写 input.value 无效**（DOM 值会变但控件模型不更新，字段仍报「请填写完整时间」），必须点开面板按 年 → 月 两步选值；(2) 获奖时间（placeholder=YYYY）= `ud__picker`，同为受控，直写无效，清空需 hover 后点 `.ud__picker-inputWrapper-clear`（opacity:0 时仍在 DOM 中）；(3) 项目经历的「起止时间」= 普通 input，可直接 type/fill。",
+    "sectionOrder": [
+      "申请信息",
+      "简历",
+      "简历附件",
+      "基本信息",
+      "教育经历",
+      "工作经历",
+      "实习经历",
+      "项目经历",
+      "作品",
+      "获奖",
+      "语言能力",
+      "自我评价",
+      "社交账号",
+      "提交简历"
+    ],
+    "sectionFieldSets": {
+      "实习经历": [
+        "公司名称*",
+        "职位名称*",
+        "起止时间*",
+        "描述"
+      ],
+      "项目经历": [
+        "项目名称*",
+        "项目角色",
+        "起止时间",
+        "项目链接",
+        "描述"
+      ],
+      "获奖": [
+        "获奖名称*",
+        "获奖时间",
+        "描述"
+      ],
+      "语言能力": [
+        "语言*",
+        "精通程度*"
+      ],
+      "自我评价": [
+        "自我评价"
+      ],
+      "工作经历": [
+        "没有工作经历（开关，无 添加 按钮）"
+      ]
+    },
+    "note": "项目经历没有独立的「项目成果」字段；资料里的 description 与 achievements 只能合并进「描述」。语言能力没有成绩/证书字段，CET-6 分数无法在此节体现。获奖时间精度只到年（YYYY）。"
+  },
+  "verifiedFlow": {
+    "fillUdSelect": [
+      {
+        "action": "read",
+        "target": "[data-form-field-id=\"<fid>\"] .ud__select__selector__content",
+        "note": "已有值则跳过，不覆盖"
+      },
+      {
+        "action": "open",
+        "rule": "取节根容器内该字段的 .ud__select__selector，按 rect 中心派发 pointerdown/mousedown/pointerup/mouseup/click（真实指针序列）"
+      },
+      {
+        "action": "scope",
+        "rule": "取 display!=='none' && rect.width>0 的 .ud__select__dropdown；可能有多个残留，用「弹层内 option 文本集」匹配目标字段的选项集，选出唯一目标"
+      },
+      {
+        "action": "match",
+        "rule": "在该弹层内按 normalize(textContent) 精确匹配 .ud__select__list__item，必须唯一"
+      },
+      {
+        "action": "click",
+        "by": "元素 .click()（不要用坐标，见 knownIssues）"
+      },
+      {
+        "action": "readback",
+        "target": "该字段 .ud__select__selector__content"
+      }
+    ],
+    "fillDateRangePicker": [
+      {
+        "action": "note",
+        "rule": "仅适用于 throne-biz-date-range-picker（教育/实习的起止时间）。type/fill 一律无效。"
+      },
+      {
+        "action": "open",
+        "rule": "点该字段左侧 input（开始时间）打开月网格面板"
+      },
+      {
+        "action": "year",
+        "rule": "**先确认面板年份**：面板顶部 .ud__picker-panel-header-btn 显示当前年份；若与目标年不符，点它展开年列表再点目标年。面板年份是会话记忆，跨字段会残留上一次的值——不确认年份直接点月份会把值写到错误的年。"
+      },
+      {
+        "action": "month",
+        "rule": "年正确后点目标月份格子"
+      },
+      {
+        "action": "repeat",
+        "rule": "对结束时间重复 open → year → month"
+      },
+      {
+        "action": "blockedFallback",
+        "rule": "面板被 .apply-form-array-card__<hash> 遮挡时报 [NOT_INTERACTABLE]。改用 eval 对目标月份格子派发完整指针序列（pointerdown/mousedown/pointerup/mouseup/click，带 clientX/clientY/button/pointerId/pointerType），可绕过遮挡"
+      },
+      {
+        "action": "readback",
+        "rule": "读该字段两个 input.value，并确认容器无 *-error（页面报错文案「请填写完整时间」即写入失败）"
+      }
+    ],
+    "clickSectionAdd": [
+      {
+        "action": "locate",
+        "rule": "用 sectionAnchor 取节根容器 w"
+      },
+      {
+        "action": "pick",
+        "rule": "w 内 textContent.trim()==='添加' 的 button（两种布局通用）"
+      },
+      {
+        "action": "click",
+        "by": "元素 .click()"
+      },
+      {
+        "action": "readback",
+        "rule": "快照确认新卡片字段 refs，再逐字段写入"
+      }
+    ],
+    "fillProjectCard": [
+      {
+        "action": "note",
+        "rule": "项目卡片共 6 个输入：项目名称*、项目角色、起止时间(2)、项目链接、描述"
+      },
+      {
+        "action": "fill",
+        "rule": "起止时间为普通 input，可与其他字段一起用 fill 批量写入；描述 = description + 空行 + achievements"
+      },
+      {
+        "action": "readback",
+        "rule": "读 6 个 input.value 逐字核对"
+      }
+    ],
+    "fillAwardCard": [
+      {
+        "action": "note",
+        "rule": "获奖卡片 3 个字段：获奖名称*、获奖时间(YYYY, ud__picker)、描述"
+      },
+      {
+        "action": "fill",
+        "rule": "获奖名称与描述可直接 fill；获奖时间填 4 位年份字符串实测可被接受（若失败改用 ud__picker 面板）"
+      },
+      {
+        "action": "readback",
+        "rule": "读 3 个字段逐字核对"
+      }
+    ]
+  },
+  "knownIssues": [
+    "同页可能存在不同日期控件；先识别控件类型，再操作并核对最终值。",
+    "经历卡片增删或重渲染后应重新定位，不能复用过期坐标。"
+  ]
+}

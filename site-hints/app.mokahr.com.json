@@ -1,0 +1,205 @@
+{
+  "schemaVersion": 1,
+  "domain": "app.mokahr.com",
+  "description": "Moka 招聘页（Semi Design 控件）",
+  "aliases": {
+    "birthday": [
+      "出生日期 (年龄)"
+    ],
+    "preferredWorkCity": [
+      "意向工作城市"
+    ],
+    "acceptLocationTransfer": [
+      "是否接受地点调剂"
+    ],
+    "acceptDepartmentTransfer": [
+      "是否接受部门调剂"
+    ],
+    "recruitmentSource": [
+      "您从什么渠道获取了我们的招聘信息？"
+    ]
+  },
+  "recordBinding": {
+    "education": "字段标题包含“硕士”或“本科”前缀时绑定对应学历 identity，不按 DOM 顺序猜测。",
+    "note": "扁平单值字段（硕士学校、本科专业）与 MD education 记录的 identity 匹配。"
+  },
+  "playbooks": {
+    "sd-select-dropdown": {
+      "description": "Moka 通用下拉（Semi Design）",
+      "steps": [
+        {
+          "action": "snapshot",
+          "purpose": "记录已存在的浮层"
+        },
+        {
+          "action": "click",
+          "target": ".sd-Select-container- label, .sd-Select-container- input, [role=combobox]"
+        },
+        {
+          "action": "wait",
+          "for": "新增 [class*=sd-Dropdown-dropdown-]",
+          "timeout": 1500
+        },
+        {
+          "action": "verify",
+          "evidence": "aria-controls/aria-owns/aria-describedby"
+        },
+        {
+          "action": "select",
+          "from": "[class*=sd-Select-common-item-]",
+          "match": "选项文本唯一"
+        },
+        {
+          "action": "click",
+          "target": "匹配选项"
+        },
+        {
+          "action": "readback",
+          "from": "[class*=display-value]",
+          "note": "值不在 input.value"
+        },
+        {
+          "action": "cleanup",
+          "method": "Escape 或 click body 关闭残留浮层"
+        }
+      ]
+    },
+    "month-pair-select": {
+      "description": "Moka 年月控件（两个 sd-Select，年份虚拟列表）",
+      "precondition": "MD 日期必须是 YYYY-MM",
+      "steps": [
+        {
+          "part": 0,
+          "label": "年份",
+          "virtualList": "scrollTop=(2126-年)*32",
+          "option": "YYYY"
+        },
+        {
+          "part": 1,
+          "label": "月份",
+          "option": "纯数字 1-12，padStart(2,'0')"
+        },
+        {
+          "action": "readback",
+          "value": "完整 YYYY-MM"
+        }
+      ]
+    },
+    "sd-select-pick": {
+      "description": "Semi Design 下拉（sd-Select-container 触发器 + sd-Dropdown-dropdown 浮层）实测可用路径",
+      "steps": [
+        {
+          "action": "eval",
+          "code": "field.querySelector('[class*=sd-Select-container]').click()",
+          "note": "合成 click 对触发器有效，能打开浮层；同一 eval 内已可同步读到选项列表，无需拆两次"
+        },
+        {
+          "action": "eval",
+          "code": "在可见浮层（display!=='none' 且 rect.width>0）内按 textContent 精确匹配目标项，setAttribute('data-jf-pick','1')"
+        },
+        {
+          "action": "click",
+          "target": "[data-jf-pick=\"1\"]",
+          "note": "必须走 Huashu 真实点击。合成 .click() 与完整 pointerdown/mousedown/pointerup/mouseup/click 序列对该选项均不生效"
+        },
+        {
+          "action": "readback",
+          "from": "[class*=sd-Input-display-value] 文本",
+          "note": "React 异步更新，写入后需再读一次；读回前先 Escape 关闭浮层"
+        }
+      ]
+    },
+    "sd-select-pick-trigger-label": {
+      "description": "卡片内下拉触发器定位与点击",
+      "steps": [
+        {
+          "action": "eval",
+          "code": "给 display-value 的 closest('label')（class 含 sd-Input-container + sd-Select-container）设临时 id，如 jf-x-y / jf-x-m",
+          "note": "空字段的 display-value span 上有点击遮挡（NOT_INTERACTABLE），id 必须设在 LABEL 上；已填字段点 display-value 子元素也能冒泡触发"
+        },
+        {
+          "action": "click",
+          "target": "#jf-x-y",
+          "note": "Huashu click 工具 selector 参数，真实点击"
+        },
+        {
+          "action": "eval",
+          "code": "可见浮层内选项打 data-jf-pick 标记并返回目标标记号",
+          "note": "浮层选择器 [class*=sd-Dropdown-dropdown],[class*=sd-Select-dropdown],[class*=sd-Select-options],[class*=sd-Options]，过滤 display:none/visibility:hidden/opacity<0.5/width=0"
+        },
+        {
+          "action": "click",
+          "target": "[data-jf-pick=\"N\"]"
+        },
+        {
+          "action": "readback",
+          "from": "卡内 [class*=display-value] 文本"
+        }
+      ]
+    },
+    "section-add-button": {
+      "description": "多卡节「添加」按钮定位（教育/实习/项目/获奖等节通用）",
+      "steps": [
+        {
+          "action": "eval",
+          "code": "从该节最后一张卡（[class*=multi-]）向上找第一个含 <button>添加</button> 的祖先（即节的 .apply-block-* 容器），用 compareDocumentPosition(firstCard)&DOCUMENT_POSITION_FOLLOWING 校验按钮在卡片列表之前",
+          "note": "防误点其他节的添加"
+        },
+        {
+          "action": "eval",
+          "code": "btn.id='jf-x-add'"
+        },
+        {
+          "action": "click",
+          "target": "#jf-x-add"
+        },
+        {
+          "action": "eval",
+          "code": "新卡=该节 cards[cards.length-1]；卡内年月 select 顺序固定：起年/起月/止年/止月（获奖卡：年/月）"
+        }
+      ]
+    },
+    "react-input-write": {
+      "description": "React 受控 input/textarea 写入与读回",
+      "steps": [
+        {
+          "action": "eval",
+          "code": "el.focus(); el.setSelectionRange(0, el.value.length); document.execCommand('insertText', false, TEXT)"
+        },
+        {
+          "action": "readback",
+          "code": "el.value === TEXT（同步即可读回）"
+        }
+      ]
+    },
+    "required-scan": {
+      "description": "必填未填项全量扫描（提交前检查）",
+      "steps": [
+        {
+          "action": "eval",
+          "code": "遍历 [class*=apply-field] 行：req=/必填/.test(rowText)；值取行内 [class*=sd-Select-container] 的 display-value，否则 input/textarea.value；过滤 req && !val",
+          "note": "期望结果 []"
+        }
+      ]
+    }
+  },
+  "fieldLayout": {
+    "educationCards": ".apply-block-* > [class*=\"multi-NTCDdF2lci\"]:nth-child(2|3)（第 1 张=硕士，第 2 张=本科；nth-child(1) 是节标题）",
+    "educationCardFieldOrder": [
+      "就读时间",
+      "学校名称",
+      "专业名称",
+      "学历",
+      "是否为最高学历",
+      "成绩专业排名",
+      "所在实验室全称（如有）",
+      "英语能力",
+      "小语种（如有）"
+    ],
+    "note": "同一张表单里字段 class 后缀不能用来判控件类型：学校名称/专业名称是 string_info 但实为自绘下拉，必须查 field 内是否存在 [class*=sd-Select-container]。"
+  },
+  "knownIssues": [
+    "相同字段可能出现在不同经历卡片；按记录身份定位，不按顺序猜测。",
+    "选项没有明确对应时保留待确认；动态弹层操作后核对实际选中值。"
+  ]
+}

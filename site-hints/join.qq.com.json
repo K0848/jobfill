@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "domain": "join.qq.com",
+  "description": "腾讯招聘页（Phoenix / 北森控件）",
+  "aliases": {
+    "description": [
+      "描述"
+    ],
+    "currentLocation": [
+      "当前所处地"
+    ],
+    "qq": [
+      "QQ号"
+    ],
+    "emergencyContactName": [
+      "紧急联系人"
+    ],
+    "emergencyContactPhone": [
+      "紧急联系人电话"
+    ]
+  },
+  "sectionMapping": {
+    "基础信息": "basic",
+    "意向信息": "basic",
+    "教育经历": "education",
+    "工作经历": "work",
+    "项目经历": "project",
+    "校园经历": "campus",
+    "获奖信息": "award"
+  },
+  "playbooks": {
+    "phoenix-select": {
+      "description": "北森 Phoenix 下拉（虚拟列表/可搜索）",
+      "steps": [
+        {
+          "action": "pointer_sequence",
+          "target": "input or field.el"
+        },
+        {
+          "action": "wait",
+          "for": ".phoenix-selectList"
+        },
+        {
+          "action": "fill",
+          "target": "input[placeholder=搜索]",
+          "if": "存在搜索框"
+        },
+        {
+          "action": "wait",
+          "for": "li.phoenix-selectList__listItem"
+        },
+        {
+          "action": "verify",
+          "virtualList": "scrollHeight<=clientHeight or aria-setsize==实际选项数 or 搜索后唯一结果"
+        },
+        {
+          "action": "select",
+          "from": ".phoenix-selectList__singleLabel or textContent",
+          "match": "选项文本唯一"
+        },
+        {
+          "action": "readback",
+          "from": ".phoenix-select__tipEle",
+          "note": "保存 selectedEvidence，展示节点与搜索 input 分离"
+        },
+        {
+          "action": "close",
+          "method": "标题派发鼠标事件序列"
+        }
+      ]
+    },
+    "phoenix-date-picker": {
+      "precondition": "MD 必须是完整 YYYY-MM-DD",
+      "steps": [
+        {
+          "action": "pointer_sequence",
+          "open": ".phoenix-date-picker"
+        },
+        {
+          "action": "fill",
+          "target": ".phoenix-calendar-input",
+          "value": "YYYY-MM-DD"
+        },
+        {
+          "action": "readback",
+          "from": "外层字段 rootValue"
+        },
+        {
+          "action": "close",
+          "method": "同下拉"
+        }
+      ]
+    }
+  },
+  "knownIssues": [
+    "未知或无法可靠读回的控件保留待处理；根据实际卡片身份定位。"
+  ]
+}

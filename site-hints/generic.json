@@ -1,0 +1,380 @@
+{
+  "schemaVersion": 1,
+  "domain": "generic",
+  "description": "跨站通用别名、防混淆规则和选项匹配",
+  "aliases": {
+    "name": [
+      "姓名",
+      "真实姓名",
+      "中文姓名",
+      "full name"
+    ],
+    "phone": [
+      "电话",
+      "手机号",
+      "手机号码",
+      "联系电话",
+      "手机",
+      "phone",
+      "mobile"
+    ],
+    "email": [
+      "邮箱",
+      "电子邮箱",
+      "电子邮件",
+      "email"
+    ],
+    "gender": [
+      "性别",
+      "gender",
+      "sex"
+    ],
+    "birthday": [
+      "出生日期",
+      "出生年月",
+      "生日"
+    ],
+    "heightCm": [
+      "身高（厘米）",
+      "身高（cm）",
+      "height (cm)"
+    ],
+    "weightKg": [
+      "体重（公斤）",
+      "体重（千克）",
+      "体重（kg）",
+      "weight (kg)"
+    ],
+    "ethnicity": [
+      "民族"
+    ],
+    "nativePlace": [
+      "籍贯"
+    ],
+    "city": [
+      "所在城市",
+      "当前城市",
+      "现居城市",
+      "现居住地",
+      "当前居住地",
+      "居住城市",
+      "目前所在地"
+    ],
+    "country": [
+      "国家/地区",
+      "国家地区",
+      "国家或地区"
+    ],
+    "idType": [
+      "证件类型"
+    ],
+    "idNumber": [
+      "证件号码",
+      "身份证号",
+      "身份证号码",
+      "证件号码（用于实名认证）"
+    ],
+    "wechat": [
+      "微信号"
+    ],
+    "hobby": [
+      "兴趣爱好"
+    ],
+    "school": [
+      "学校",
+      "学校名称",
+      "院校名称",
+      "毕业院校"
+    ],
+    "college": [
+      "学院名称",
+      "学院",
+      "院系",
+      "院系名称",
+      "所在院系/研究所",
+      "院系/研究所"
+    ],
+    "major": [
+      "专业名称",
+      "所学专业",
+      "专业"
+    ],
+    "majorCategory": [
+      "专业类别"
+    ],
+    "degree": [
+      "学历层次",
+      "学历"
+    ],
+    "academicDegree": [
+      "学位",
+      "获得学位",
+      "所获学位"
+    ],
+    "studyForm": [
+      "学习形式",
+      "培养方式",
+      "受教育类型",
+      "学历类型"
+    ],
+    "studyLocation": [
+      "学校所在地",
+      "学校所在地区"
+    ],
+    "highest": [
+      "是否最高学历"
+    ],
+    "doubleDegree": [
+      "是否双学位"
+    ],
+    "rank": [
+      "专业成绩排名",
+      "成绩排名",
+      "专业排名",
+      "gpa排名"
+    ],
+    "company": [
+      "公司名称",
+      "公司",
+      "企业名称",
+      "实习单位"
+    ],
+    "role": [
+      "职位名称",
+      "岗位名称",
+      "担任角色",
+      "项目角色",
+      "担任职务",
+      "职务"
+    ],
+    "department": [
+      "部门",
+      "所在部门",
+      "所属部门",
+      "部门名称",
+      "实习部门"
+    ],
+    "projectName": [
+      "项目名称",
+      "课题名称"
+    ],
+    "activityName": [
+      "活动名称"
+    ],
+    "projectLink": [
+      "项目链接",
+      "项目地址",
+      "项目网址",
+      "作品链接",
+      "作品地址",
+      "开源链接",
+      "开源地址",
+      "仓库地址",
+      "github",
+      "github地址",
+      "github链接",
+      "project url",
+      "project link"
+    ],
+    "responsibilities": [
+      "个人职责",
+      "项目职责",
+      "项目中职责",
+      "主要职责",
+      "工作职责",
+      "实习职责",
+      "职责描述"
+    ],
+    "achievements": [
+      "项目成果",
+      "工作成果",
+      "主要成果"
+    ],
+    "preferredWorkCity": [
+      "意向工作城市",
+      "期望工作城市"
+    ],
+    "acceptLocationTransfer": [
+      "是否接受地点调剂"
+    ],
+    "acceptDepartmentTransfer": [
+      "是否接受部门调剂"
+    ],
+    "recruitmentSource": [
+      "获取信息渠道"
+    ],
+    "expectedSalary": [
+      "期望薪资",
+      "期望月薪（元）",
+      "期望年薪（万元）"
+    ],
+    "availability": [
+      "到岗时间",
+      "可到岗日期"
+    ],
+    "description": [
+      "工作描述",
+      "工作内容",
+      "实习描述",
+      "项目描述",
+      "项目内容",
+      "项目简介",
+      "经历描述"
+    ],
+    "start": [
+      "开始时间",
+      "起始时间",
+      "入学时间",
+      "入职时间",
+      "开始日期",
+      "入学日期"
+    ],
+    "end": [
+      "结束时间",
+      "毕业时间",
+      "离职时间",
+      "结束日期",
+      "毕业日期"
+    ],
+    "awardName": [
+      "奖项名称",
+      "评优表彰名称",
+      "奖励名称"
+    ],
+    "awardDate": [
+      "获奖时间",
+      "获奖日期"
+    ],
+    "awardType": [
+      "奖项类型"
+    ],
+    "awardLevel": [
+      "评优表彰级别",
+      "奖项级别"
+    ],
+    "language": [
+      "外语语种",
+      "语言类型"
+    ],
+    "exam": [
+      "考试名称",
+      "语言考试类型"
+    ],
+    "score": [
+      "考试成绩",
+      "六级成绩"
+    ],
+    "languageResult": [
+      "语言考试成绩"
+    ],
+    "skillType": [
+      "技能类型"
+    ],
+    "selfEvaluation": [
+      "自我评价",
+      "个人评价",
+      "自我描述",
+      "自我介绍"
+    ],
+    "research": [
+      "研究方向"
+    ],
+    "mentor": [
+      "导师"
+    ],
+    "lab": [
+      "实验室"
+    ]
+  },
+  "preventMix": [
+    {
+      "from": "学历",
+      "mustNotMap": "academicDegree",
+      "reason": "学历层次不能当成已获得学位"
+    },
+    {
+      "from": "学历类型",
+      "correctKey": "studyForm",
+      "wrongKey": "degree",
+      "reason": "学历类型表达修读形式，不是学历层次"
+    },
+    {
+      "from": "学校所在地",
+      "mustNotMap": "city",
+      "reason": "学校所在地不能当成现居城市"
+    },
+    {
+      "from": "工作职责",
+      "correctKey": "responsibilities",
+      "wrongKey": "description",
+      "reason": "职责是限字职责源，不能用完整描述替代"
+    },
+    {
+      "from": "身高",
+      "rejectWithout": "单位标注（厘米或英寸）",
+      "reason": "没有单位时不推算公制值"
+    },
+    {
+      "from": "体重",
+      "rejectWithout": "单位标注（公斤或磅）",
+      "reason": "没有单位时不推算公制值"
+    },
+    {
+      "from": "项目职务/项目角色",
+      "correctKey": "project[].role",
+      "wrongKey": "work[].role",
+      "reason": "项目内的职务取该项目自身 role（如独立开发者），不得取工作经历岗位名称或自拟职位"
+    },
+    {
+      "from": "培养方式",
+      "mustNotMap": "studyForm",
+      "reason": "培养方式可能指定向/非定向（如“非定向（统招、并轨）”），与学习形式（全日制/非全日制）不同，须按页面选项集判断后再映射"
+    },
+    {
+      "from": "期望工作地点",
+      "mustNotMap": "preferredWorkCity",
+      "reason": "飞书租户的「期望工作地点」是「国家/地区 → 省 → 市」多选树，顶层是国家/地区而非城市；不能用城市级偏好（preferredWorkCity/city）直接映射，须先看控件顶层语义"
+    },
+    {
+      "from": "期望工作地点",
+      "mustNotMap": "city",
+      "reason": "所在地点（现居城市）与期望工作地点是两个字段，不能互相回填"
+    }
+  ],
+  "optionMatching": {
+    "degree": {
+      "硕士": [
+        "硕士",
+        "硕士研究生",
+        "硕士（Master）"
+      ],
+      "博士": [
+        "博士",
+        "博士研究生",
+        "博士（Doctorate/PHD）"
+      ],
+      "本科": [
+        "本科",
+        "本科（Bachelor）"
+      ],
+      "专科": [
+        "专科",
+        "专科（Associate）"
+      ]
+    },
+    "studyForm": {
+      "全日制": [
+        "全日制",
+        "统招全日制",
+        "全日制普通高等教育"
+      ]
+    },
+    "rule": "选项匹配不能删除修读形式限定；例如“非全日制硕士研究生”不能匹配“硕士”。"
+  },
+  "matching": {
+    "exactAliasFirst": true,
+    "fuzzyMinScore": 0.85,
+    "fuzzyMinMargin": 0.25,
+    "fuzzyRequiresUserCheck": true
+  }
+}

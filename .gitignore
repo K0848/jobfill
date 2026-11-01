@@ -1,0 +1,13 @@
+# 个人资料及执行产物应放在 data/；示例仅保留虚构内容。
+/data/
+/reports/
+/artifacts/
+/tmp/
+*.profile.json
+*.log
+.env
+.env.*
+!.env.example
+**/node_modules/
+**/__pycache__/
+.jobfill-*
