@@ -14,6 +14,13 @@ Jobfill 包含一个项目级 Codex Skill 和 Node.js 批量执行工具。它�
 
 ## 准备
 
+下载项目并进入目录：
+
+```bash
+git clone https://github.com/K0848/jobfill.git
+cd jobfill
+```
+
 1. 安装 Node.js 22.19 或更新版本；本仓库的本地回归在 Node.js 24.14.1 运行。运行脚本只使用 Node 内置模块。
 2. 安装并配置 [Huashu Chrome](https://github.com/alchaincyf/huashu-chrome)，按其说明连接自己的 Chrome。运行 `npx huashu-chrome doctor` 检查桥接和扩展状态。安装命令可能更改本机 Agent 的 MCP 配置，请先阅读该项目说明。
 3. 克隆本仓库，在 Codex 中以仓库根目录打开项目。项目级 Skill 位于 `.agents/skills/fill-job-application/SKILL.md`。在会话中指定使用 `$fill-job-application`；若没有出现，可重新打开项目并检查是否存在同名 Skill。有关项目级 Skill 的发现方式见 [OpenAI 文档](https://developers.openai.com/codex/skills/)。
