@@ -38,3 +38,25 @@
 !/tools/profile-converter.js
 !/tools/tab-resolver.js
 !/tools/widget-executor.js
+
+# Shared tracker implementation and public contract
+!/tools/update-job-tracker.py
+!/tools/convert-skill-links.ps1
+!/tests/test_job_tracker.py
+!/docs/
+!/docs/job-tracker.md
+!/examples/personal-workflow.example.md
+!/tools/init-local.cjs
+!/tests/init-local.cjs
+
+# 私人资料、浏览器身份和运行产物：始终不公开。
+/data/
+/.codex/
+/.claude/
+/.workbuddy-ai/
+.env
+.env.*
+**/node_modules/
+**/__pycache__/
+/tests/artifacts/
+*.log

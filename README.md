@@ -69,7 +69,13 @@ cd jobfill
 
 ### 2. 准备自己的资料
 
-在项目目录中创建 `data/` 文件夹，将 [虚构资料示例](examples/profile.example.md)复制为 `data/profile.md`，用本人**已经确认**的信息替换示例；未知字段留空。请勿覆盖已有资料。
+运行初始化命令，生成本机资料和个人流程模板；重复执行会保留已有文件，不覆盖个人内容：
+
+```powershell
+node tools/init-local.cjs
+```
+
+编辑 `data/profile.md`，把[虚构示例](examples/profile.example.md)替换为本人**已经确认**的信息，未知字段留空。编辑 `data/personal-workflow.md` 配置个人偏好；如需 Excel 跟进，填写本人工作簿路径并确认自动更新授权和状态口径。未配置跟进表不影响网页填写。不要直接用虚构示例申请岗位。
 
 资料中需包含一个 `jobfill: 1` JSON 块。每条教育、工作或项目记录使用组内唯一的 `identity`；详细格式可直接参考示例。
 
@@ -88,6 +94,14 @@ node tools/profile-converter.js data/profile.md data/profile.profile.json
 > 使用 $fill-job-application，根据 data/profile.md 核对并填写我当前打开的招聘页面；先保留有冲突的已有内容，填写后列出需要我检查的项目。
 
 项目级 Skill 位于 [`.agents/skills/fill-job-application/SKILL.md`](.agents/skills/fill-job-application/SKILL.md)。如果 Skill 未出现，可重新打开项目并检查是否存在同名 Skill。
+
+默认使用项目公开 Skill，它会在存在时读取本机个人配置。需要 `.codex`、`.claude`、`.workbuddy-ai` 入口时，先完成上述初始化，再在具备软链接权限的 Windows PowerShell 中运行：
+
+```powershell
+./tools/convert-skill-links.ps1
+```
+
+脚本既可创建缺失入口，也可转换已有同源硬链接；不覆盖内容不同的文件。这些入口只在本机生成，不随仓库分发。复制或移动整个仓库后需重新核对入口目标。
 
 ## 一次填写的结果是什么样的？
 
@@ -120,16 +134,29 @@ node tools/jobfill-batch-cli.js --request-file data/request.json
 
 - 仓库只提供工具和虚构示例。请勿提交真实资料、请求、报告、浏览器配置、凭据或网申截图。
 - `.gitignore` 默认忽略未列入公开白名单的本地文件；新增公开文件需审查后放行。已被 Git 跟踪的文件仍需在提交前检查内容。
+- 公开内容包含运行模块、站点规则、虚构模板、测试和使用说明。真实简历与附件、联系方式、证件信息、家庭及经历资料、薪资和城市偏好、投递表、浏览器身份及 token、填写请求和报告、截图、备份均属于私人或本机内容，放在 `data/` 或项目外，不加入公开白名单。忽略规则不会清除历史提交，也不会自动清除已跟踪文件中的个人信息。
 - Agent 和浏览器工具会读取所需资料，数据处理取决于所用服务与配置。
 - Skill 默认不代替用户点击网站的保存、下一步或提交，也不默认修改个人资料或投递跟进表。经用户授权更新跟进表时，默认不生成备份；仅在用户明确要求时创建。验证码、协议及最终提交由用户处理。
 - 本项目以 Codex Skill 和 Node.js 脚本协同工作；`extension/` 是脚本使用的模块集合，不是可独立安装的 Chrome 扩展。
 
 ## 验证与边界
 
+### 多聊天更新投递跟进表
+
+经用户授权后，统一使用 `tools/update-job-tracker.py` 更新 Excel，避免不同聊天用旧快照互相覆盖。该入口需要 Windows 和 Python 3，仅依赖标准库；写入前取得跨进程锁，随后读取最新文件、按岗位去重并读回真实超链接。只维护公司、岗位、链接、状态，保留其他内容及格式。请求与状态口径见 [跟进表更新说明](docs/job-tracker.md)。
+
+```powershell
+python -B tests/test_job_tracker.py
+```
+
+本机个人资料与已确认偏好放在被 Git 忽略的 `data/` 中；公共 Skill 不包含这些资料。个人流程使用 `data/personal-workflow.md`，本机各 Agent 入口可通过 `tools/convert-skill-links.ps1` 转为指向它的软链接；需要 Windows 创建软链接的权限。
+
+### 浏览器填写回归
+
 本仓库包含 **9 个回归脚本**，覆盖资料解析、语义匹配、站点规则、标签定位、桥接、控件执行和批量运行。以下命令使用虚构资料或模拟桥接：
 
 ```powershell
-node --test tests/profile-converter.cjs tests/semantic-mapper.cjs tests/site-hints.cjs tests/tab-resolver.cjs tests/huashu-bridge.cjs tests/widget-executor.cjs tests/jobfill-independent-checker.cjs tests/jobfill-runtime.cjs tests/jobfill-cli-process.cjs
+node --test tests/profile-converter.cjs tests/semantic-mapper.cjs tests/site-hints.cjs tests/tab-resolver.cjs tests/huashu-bridge.cjs tests/widget-executor.cjs tests/jobfill-independent-checker.cjs tests/jobfill-runtime.cjs tests/jobfill-cli-process.cjs tests/init-local.cjs
 ```
 
 另有上文所述的真实浏览器本地表单验证。招聘网站、日期、多选、附件和复杂弹层的兼容性取决于当前页面，未适配或无法可靠读回时应由用户检查。
