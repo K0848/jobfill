@@ -129,6 +129,52 @@ def cell_value(c, strings):
     return strings[int(value)] if c.get('t') == 's' and value else value
 
 
+def formula_link(c):
+    """只解析确定的字面量网址，不求值引用或拼接，避免把未知链接当作新岗位。"""
+    formula = c.find(f'{{{NS}}}f') if c is not None else None
+    if formula is None:
+        return None
+    # 共享或数组公式的主单元格不能独立转换，否则会破坏同组其他单元格。
+    if formula.get('t', 'normal') != 'normal':
+        raise ValueError(f'{c.get("r")} 的共享或数组链接公式不支持单独更新')
+    literal = r'"(?:[^"]|"")*"'
+    match = re.fullmatch(r'\s*=?\s*HYPERLINK\s*\(\s*(' + literal +
+                         r')\s*(?:,\s*' + literal + r'\s*)?\)\s*',
+                         formula.text or '', re.I)
+    if not match:
+        raise ValueError(f'{c.get("r")} 的职位链接公式无法安全解析，请先转换为明确的网址')
+    url = match[1][1:-1].replace('""', '"')
+    parsed = urlsplit(url)
+    if parsed.scheme not in ('http', 'https') or not parsed.hostname:
+        raise ValueError(f'{c.get("r")} 的职位链接公式不是 HTTP(S) 网址')
+    return url
+
+
+def element_pattern(tag, attribute=None, value=None):
+    # 开标签不能吞掉自闭合的斜线，否则会继续匹配到相邻元素的结束标签。
+    attr = (r'[^>]*?\b' + attribute + r'=["\']' + re.escape(value) + r'["\']') if attribute else ''
+    return r'<' + tag + r'\b' + attr + r'[^>]*?(?:/\s*>|>(?:(?!<' + tag + r'\b).)*?</' + tag + r'>)'
+
+
+def invalidate_calculation_chain(parts):
+    # 公式变成普通链接后，旧链仍指向该单元格会使 Excel 拒绝正常打开。
+    # calcChain 是可重建的缓存；同时移除关系和类型声明，交给 Excel 重建。
+    relpath = 'xl/_rels/workbook.xml.rels'
+    relxml = parts[relpath].decode('utf-8')
+    types = parts['[Content_Types].xml'].decode('utf-8')
+    for relation in ET.fromstring(relxml):
+        if relation.get('Type', '').endswith('/calcChain'):
+            target = relation.get('Target')
+            path = target.lstrip('/') if target.startswith('/') else posixpath.normpath('xl/' + target)
+            relxml, count = re.subn(element_pattern('Relationship', 'Id', relation.get('Id')), '', relxml, flags=re.S)
+            types, type_count = re.subn(element_pattern('Override', 'PartName', '/' + path), '', types, flags=re.S)
+            if count != 1 or type_count != 1:
+                raise ValueError('无法安全移除公式计算链缓存，未保存')
+            parts.pop(path, None)
+    parts[relpath] = relxml.encode('utf-8')
+    parts['[Content_Types].xml'] = types.encode('utf-8')
+
+
 def inspect_book(parts):
     strings = []
     if 'xl/sharedStrings.xml' in parts:
@@ -175,7 +221,9 @@ def patch_book(parts, request):
         rn = int(row.get('r'))
         cells = {c.get('r'): c for c in row}
         get = lambda key: cell_value(cells.get(cols[key] + str(rn)), strings)
-        url = links.get(cols['url'] + str(rn)) or get('url')
+        link_ref = cols['url'] + str(rn)
+        # 必须先解析公式；缓存值通常是“查看岗位”，不能参与网址去重。
+        url = formula_link(cells.get(link_ref)) or links.get(link_ref) or get('url')
         if url and identity(url) == identity(request['url']):
             if get('company') != request['company'] or get('job') != request['job']:
                 raise ValueError('职位链接匹配，但公司或岗位名称冲突；请先核对，不覆盖已有记录')
@@ -208,23 +256,27 @@ def patch_book(parts, request):
                         if k in ('s', 'customFormat', 'ht', 'customHeight', 'spans'))
         rowxml = f'<row r="{rn}"{attrs}></row>'
     else:
-        rowmatch = re.search(r'<row\b[^>]*\br=["\']' + str(rn) + r'["\'][^>]*(?:/>|>.*?</row>)', xml, re.S)
+        rowmatch = re.search(element_pattern('row', 'r', str(rn)), xml, re.S)
         if not rowmatch:
             raise ValueError('无法定位目标行 XML')
         rowxml = rowmatch.group()
+    converted_formula = False
     for col, value in values.items():
         ref = col + str(rn)
         old = cells.get(ref)
         if old is not None and old.find(f'{{{NS}}}f') is not None:
-            raise ValueError(f'{ref} 存在公式，拒绝覆盖')
+            # 已解析的目标链接改为原生超链接，显示完整网址；其余公式仍禁止覆盖。
+            if col != cols['url'] or formula_link(old) is None:
+                raise ValueError(f'{ref} 存在公式，拒绝覆盖')
+            converted_formula = True
         replacement = cell_xml(ref, value, old.get('s') if old is not None else styles.get(col), new and col == cols['serial'])
-        pattern = r'<c\b[^>]*\br=["\']' + ref + r'["\'][^>]*(?:/>|>.*?</c>)'
+        pattern = element_pattern('c', 'r', ref)
         if re.search(pattern, rowxml, re.S):
             rowxml = re.sub(pattern, lambda _: replacement, rowxml, count=1, flags=re.S)
         else:
             rowxml = rowxml.replace('</row>', replacement + '</row>')
     # 单元格按列排序，未改动单元格的原始 XML 不变。
-    cell_chunks = re.findall(r'<c\b[^>]*(?:/>|>.*?</c>)', rowxml, re.S)
+    cell_chunks = re.findall(element_pattern('c'), rowxml, re.S)
     def column_number(chunk):
         col = re.search(r'\br=["\']([A-Z]+)\d+', chunk).group(1)
         n = 0
@@ -253,7 +305,7 @@ def patch_book(parts, request):
     if not reuse:
         relxml = relxml.replace('</Relationships>', relationship + '</Relationships>')
     hyperlink = f'<hyperlink xmlns:r="{REL}" ref="{ref}" r:id="{rid}"/>'
-    pattern = r'<hyperlink\b[^>]*\bref=["\']' + ref + r'["\'][^>]*(?:/>|>.*?</hyperlink>)'
+    pattern = element_pattern('hyperlink', 'ref', ref)
     if re.search(pattern, xml, re.S):
         # 保留旧 relationship 无害，避免误删被其他单元格复用的链接。
         xml = re.sub(pattern, lambda _: hyperlink, xml, count=1, flags=re.S)
@@ -265,6 +317,15 @@ def patch_book(parts, request):
         after = ('printOptions', 'pageMargins', 'pageSetup', 'headerFooter', 'rowBreaks', 'colBreaks', 'customProperties', 'cellWatches', 'ignoredErrors', 'smartTags', 'drawing', 'legacyDrawing', 'legacyDrawingHF', 'picture', 'oleObjects', 'controls', 'webPublishItems', 'tableParts', 'extLst')
         m = re.search(r'<(?:' + '|'.join(after) + r')\b|</worksheet>', xml)
         xml = xml[:m.start()] + '<hyperlinks>' + hyperlink + '</hyperlinks>' + xml[m.start():]
+    # 写盘前用独立的 XML 结构比较保护非目标单元格，误删或更改即中止事务。
+    patched_root = ET.fromstring(xml)
+    allowed = {col + str(rn) for col in values}
+    snapshot = lambda tree: {c.get('r'): ET.tostring(c) for c in tree.findall(f'{{{NS}}}sheetData/{{{NS}}}row/{{{NS}}}c')
+                             if c.get('r') not in allowed}
+    if snapshot(root) != snapshot(patched_root):
+        raise ValueError('非目标单元格发生变化，拒绝保存')
+    if converted_formula:
+        invalidate_calculation_chain(parts)
     parts[path] = xml.encode('utf-8')
     parts[relpath] = relxml.encode('utf-8')
     return {'sheet': name, 'row': rn, 'action': 'inserted' if new else 'updated', 'status': status,
@@ -292,7 +353,8 @@ def update(workbook, request, timeout=30):
                 with zipfile.ZipFile(out, 'w') as target:
                     target.comment = comment
                     for info in infos:
-                        target.writestr(info, parts.pop(info.filename))
+                        if info.filename in parts:
+                            target.writestr(info, parts.pop(info.filename))
                     for name, content in parts.items():
                         target.writestr(name, content, compress_type=zipfile.ZIP_DEFLATED)
                 out.flush()

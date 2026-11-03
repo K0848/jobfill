@@ -48,6 +48,7 @@
 !/examples/personal-workflow.example.md
 !/tools/init-local.cjs
 !/tests/init-local.cjs
+!/tests/tracker-excel.ps1
 
 # 私人资料、浏览器身份和运行产物：始终不公开。
 /data/

@@ -10,6 +10,7 @@ import unittest
 from unittest.mock import patch
 import zipfile
 import xml.etree.ElementTree as ET
+from xml.sax.saxutils import escape
 
 SCRIPT = Path(__file__).resolve().parents[1] / 'tools/update-job-tracker.py'
 spec = importlib.util.spec_from_file_location('tracker', SCRIPT)
@@ -52,6 +53,124 @@ class TrackerTests(unittest.TestCase):
     def parts(self):
         with zipfile.ZipFile(self.path) as z:
             return {n: z.read(n) for n in z.namelist()}
+
+    def replace_sheet(self, old, new):
+        parts = self.parts()
+        key = 'xl/worksheets/sheet1.xml'
+        parts[key] = parts[key].decode().replace(old, new).encode()
+        with zipfile.ZipFile(self.path, 'w') as z:
+            for name, content in parts.items():
+                z.writestr(name, content)
+
+    def cell_snapshot(self):
+        # 独立解析落盘 XML，不使用被测工具的单元格读取逻辑。
+        root = ET.fromstring(self.parts()['xl/worksheets/sheet1.xml'])
+        return {c.get('r'): ET.tostring(c) for c in root.findall(f'.//{{{t.NS}}}c')}
+
+    def test_empty_status_variants_preserve_every_other_cell(self):
+        for empty in ('<c r="F2" s="3"/>', '<c r="F2" s="3"></c>'):
+            with self.subTest(empty=empty):
+                fixture(self.path)
+                self.replace_sheet(t.cell_xml('F2', '', '3'), empty +
+                    '<c r="G2" s="5"><f>1+2</f><v>3</v></c>' +
+                    '<c r="H2" s="4" t="inlineStr"><is><t>保留结果</t></is></c>')
+                self.replace_sheet('</row></sheetData>', '<c r="J2" s="3"/><c r="K2" s="4"/></row></sheetData>')
+                before = self.cell_snapshot()
+                data = dict(company='已有公司', job='产品经理', url='https://example.com/job?id=1', completed=True)
+                self.assertEqual(t.update(self.path, data)['status'], '筛选中')
+                after = self.cell_snapshot()
+                self.assertEqual(set(before), set(after))
+                for ref in before.keys() - {'B2', 'C2', 'E2', 'F2'}:
+                    self.assertEqual(before[ref], after[ref], ref)
+
+    def test_literal_formula_link_deduplicates_and_converts_only_target(self):
+        for formula in ('HYPERLINK("https://example.com/job?id=1","查看岗位")',
+                        ' = hyperlink ( "https://example.com/job?id=1" , "查看""岗位" ) ',
+                        'HYPERLINK("https://example.com/job?id=1")'):
+            with self.subTest(formula=formula):
+                fixture(self.path)
+                self.replace_sheet(t.cell_xml('E2', 'https://example.com/job?id=1', '6'),
+                    '<c r="E2" s="6" t="str"><f>' + escape(formula) + '</f><v>查看岗位</v></c>')
+                before = self.cell_snapshot()
+                data = dict(company='已有公司', job='产品经理', url='https://example.com/job?id=1', completed=True)
+                self.assertEqual(t.update(self.path, data)['row'], 2)
+                after = self.cell_snapshot()
+                self.assertEqual(set(before), set(after))
+                for ref in before.keys() - {'B2', 'C2', 'E2', 'F2'}:
+                    self.assertEqual(before[ref], after[ref], ref)
+                root = ET.fromstring(self.parts()['xl/worksheets/sheet1.xml'])
+                cell = root.find(f'.//{{{t.NS}}}c[@r="E2"]')
+                self.assertIsNone(cell.find(f'{{{t.NS}}}f'))
+                self.assertEqual(''.join(cell.itertext()), data['url'])
+                saved = self.parts()
+                self.assertEqual(t.update(self.path, data)['row'], 2)
+                self.assertEqual(saved, self.parts())
+
+    def test_unresolved_link_formula_stops_without_changing_file(self):
+        for formula in ('HYPERLINK(A2,"查看岗位")',
+                        'HYPERLINK("https://example.com/"&A2,"查看岗位")',
+                        'IF(A2,HYPERLINK("https://example.com/job?id=1","查看岗位"),"")'):
+            with self.subTest(formula=formula):
+                fixture(self.path)
+                self.replace_sheet(t.cell_xml('E2', 'https://example.com/job?id=1', '6'),
+                    '<c r="E2" t="str"><f>' + escape(formula) + '</f><v>查看岗位</v></c>')
+                before = self.path.read_bytes()
+                with self.assertRaisesRegex(ValueError, '公式'):
+                    t.update(self.path, request())
+                self.assertEqual(before, self.path.read_bytes())
+
+    def test_other_target_formula_is_not_overwritten(self):
+        self.replace_sheet(t.cell_xml('B2', '已有公司', '4'),
+            '<c r="B2" t="str"><f>"已有公司"</f><v>已有公司</v></c>')
+        before = self.path.read_bytes()
+        with self.assertRaisesRegex(ValueError, '公式'):
+            t.update(self.path, dict(company='已有公司', job='产品经理', url='https://example.com/job?id=1', completed=True))
+        self.assertEqual(before, self.path.read_bytes())
+
+    def test_shared_and_array_formula_links_leave_original_unchanged(self):
+        for attrs, formula in (
+                ('t="shared" si="0" ref="E2:E3"', 'HYPERLINK("https://example.com/job?id=1","查看岗位")'),
+                ('t="shared" si="0"', ''),
+                ('t="array" ref="E2:E3"', 'HYPERLINK("https://example.com/job?id=1","查看岗位")'),
+                ('t="dataTable" ref="E2:E3"', '')):
+            with self.subTest(attrs=attrs):
+                fixture(self.path)
+                self.replace_sheet(t.cell_xml('E2', 'https://example.com/job?id=1', '6'),
+                    f'<c r="E2" t="str"><f {attrs}>{escape(formula)}</f><v>查看岗位</v></c>')
+                before = self.path.read_bytes()
+                with self.assertRaisesRegex(ValueError, '公式'):
+                    t.update(self.path, request())
+                self.assertEqual(before, self.path.read_bytes())
+
+    def test_formula_conversion_invalidates_excel_calculation_chain(self):
+        self.replace_sheet(t.cell_xml('E2', 'https://example.com/job?id=1', '6'),
+            '<c r="E2" t="str"><f>HYPERLINK("https://example.com/job?id=1","查看岗位")</f><v>查看岗位</v></c>')
+        parts = self.parts()
+        key = 'xl/_rels/workbook.xml.rels'
+        parts[key] = parts[key].replace(b'</Relationships>',
+            f'<Relationship Id="calc1" Target="calcChain.xml" Type="{t.REL}/calcChain"/></Relationships>'.encode())
+        parts['[Content_Types].xml'] = parts['[Content_Types].xml'].replace(b'</Types>',
+            b'<Override PartName="/xl/calcChain.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.calcChain+xml"/></Types>')
+        parts['xl/calcChain.xml'] = f'<calcChain xmlns="{t.NS}"><c r="E2" i="1"/><c r="D2" i="1"/></calcChain>'.encode()
+        with zipfile.ZipFile(self.path, 'w') as z:
+            for name, content in parts.items():
+                z.writestr(name, content)
+        t.update(self.path, dict(company='已有公司', job='产品经理', url='https://example.com/job?id=1', completed=True))
+        after = self.parts()
+        self.assertNotIn('xl/calcChain.xml', after)
+        self.assertFalse(any(r.get('Type', '').endswith('/calcChain') for r in ET.fromstring(after[key])))
+        self.assertFalse(any(r.get('PartName') == '/xl/calcChain.xml' for r in ET.fromstring(after['[Content_Types].xml'])))
+        root = ET.fromstring(after['xl/worksheets/sheet1.xml'])
+        self.assertEqual(root.findtext(f'.//{{{t.NS}}}c[@r="D2"]/{{{t.NS}}}f'), '1+2')
+
+    def test_non_target_hyperlink_is_preserved(self):
+        self.replace_sheet('<pageMargins',
+            '<hyperlinks><hyperlink ref="E2" location="old"/><hyperlink ref="I2" location="Sheet2!A1"></hyperlink></hyperlinks><pageMargins')
+        t.update(self.path, dict(company='已有公司', job='产品经理', url='https://example.com/job?id=1', completed=True))
+        root = ET.fromstring(self.parts()['xl/worksheets/sheet1.xml'])
+        link = root.find(f'{{{t.NS}}}hyperlinks/{{{t.NS}}}hyperlink[@ref="I2"]')
+        self.assertIsNotNone(link)
+        self.assertEqual(link.get('location'), 'Sheet2!A1')
 
     def start(self, i, data):
         req = Path(self.tmp.name) / f'{i}.json'
