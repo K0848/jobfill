@@ -4,7 +4,7 @@
 
 适用于本机 Windows 中多个网申聊天共用一个 `.xlsx` 文件。仅用 Python 标准库，不要求安装 Excel 或重新导入／导出整张表。网页各自绑定 tabId 并行填写；更新跟进表时通过此入口串行执行。
 
-工作簿由用户或被忽略的本机个人工作流指定，示例为 `C:\path\to\tracker.xlsx`，工具要求显式传入，测试不得省略后误写正式文件。先把下列内容保存为 UTF-8 JSON（示例不是待投递事实）：
+工作簿由用户或被忽略的本机个人配置指定，示例为 `C:\path\to\tracker.xlsx`，工具要求显式传入，测试不得省略后误写正式文件。先把下列内容保存为 UTF-8 JSON（示例不是待投递事实）：
 
 ```json
 {
@@ -42,7 +42,7 @@ python -B tools/update-job-tracker.py --workbook 'C:\path\to\tracker.xlsx' --req
 
 ## Skill 文件入口
 
-公开 Skill 位于 `.agents/skills/fill-job-application/SKILL.md`。本机私人流程独立维护在 Git 忽略的 `data/personal-workflow.md`；本机 `.claude`、`.codex`、`.workbuddy-ai` 的入口共享此文件。`tools/convert-skill-links.ps1` 在具备权限时将这三个本机硬链接转换为文件软链接，目标根据脚本所在仓库自动定位，不依赖旧目录。
+唯一执行流程位于 `.agents/skills/fill-job-application/SKILL.md`。Git 忽略的 `data/personal-workflow.md` 只维护本机路径、偏好和已确认授权；本机 `.claude`、`.codex`、`.workbuddy-ai` 入口共享此配置，再引用同一个执行流程，不各自维护步骤。`tools/convert-skill-links.ps1` 在具备权限时将这三个本机硬链接转换为文件软链接，目标根据脚本所在仓库自动定位，不依赖旧目录。
 
 全新克隆先运行 `node tools/init-local.cjs`，再编辑生成的本机资料和授权。之后在仓库根目录运行 `./tools/convert-skill-links.ps1`；只读检查添加 `-CheckOnly`。缺失入口会新建，已有同源硬链接会转换；转换前先验证临时软链接，权限不足时不删除旧入口，不修改开发者模式或执行策略。实际转换须在具备权限的 PowerShell 中完成。
 

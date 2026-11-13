@@ -19,7 +19,7 @@
 git clone https://github.com/K0848/jobfill.git
 ```
 
-> **使用前提：** Node.js、Codex 和已连接自己 Chrome 的 [Huashu Chrome](https://github.com/alchaincyf/huashu-chrome)。网申页面的最终检查、保存和提交由你完成。
+> **使用前提：** Node.js、Codex 和已连接自己 Chrome 的 [Huashu Chrome](https://github.com/alchaincyf/huashu-chrome)。按已有授权完成填写、核对和模块保存，最终提交由你确认。
 
 ## 为什么做 Jobfill
 
@@ -42,7 +42,7 @@ flowchart LR
     C["Chrome 当前网申页面"] --> B
     B --> D["Jobfill 批量执行"]
     D --> E["页面读回<br/>与结果报告"]
-    E --> F["用户检查、保存与提交"]
+    E --> F["按授权保存模块<br/>用户确认最终提交"]
 ```
 
 - **资料来源：** 使用你指定的文件，支持基本信息、教育、工作、项目等记录。经历通过 `identity` 区分；缺少依据的字段应保持空白。
@@ -69,7 +69,7 @@ cd jobfill
 
 ### 2. 准备自己的资料
 
-运行初始化命令，生成本机资料和个人流程模板；重复执行会保留已有文件，不覆盖个人内容：
+运行初始化命令，生成本机资料和个人配置模板；重复执行会保留已有文件，不覆盖个人内容：
 
 ```powershell
 node tools/init-local.cjs
@@ -95,7 +95,7 @@ node tools/profile-converter.js data/profile.md data/profile.profile.json
 
 项目级 Skill 位于 [`.agents/skills/fill-job-application/SKILL.md`](.agents/skills/fill-job-application/SKILL.md)。如果 Skill 未出现，可重新打开项目并检查是否存在同名 Skill。
 
-默认使用项目公开 Skill，它会在存在时读取本机个人配置。需要 `.codex`、`.claude`、`.workbuddy-ai` 入口时，先完成上述初始化，再在具备软链接权限的 Windows PowerShell 中运行：
+执行流程只维护在上述公开 Skill 中；它会读取本机配置 `data/personal-workflow.md` 中的路径、偏好和已确认授权。该配置不复制执行步骤。本机别名入口先读取配置，再引用同一个公开 Skill。需要 `.codex`、`.claude`、`.workbuddy-ai` 入口时，先完成上述初始化，再在具备软链接权限的 Windows PowerShell 中运行：
 
 ```powershell
 ./tools/convert-skill-links.ps1
@@ -136,7 +136,7 @@ node tools/jobfill-batch-cli.js --request-file data/request.json
 - `.gitignore` 默认忽略未列入公开白名单的本地文件；新增公开文件需审查后放行。已被 Git 跟踪的文件仍需在提交前检查内容。
 - 公开内容包含运行模块、站点规则、虚构模板、测试和使用说明。真实简历与附件、联系方式、证件信息、家庭及经历资料、薪资和城市偏好、投递表、浏览器身份及 token、填写请求和报告、截图、备份均属于私人或本机内容，放在 `data/` 或项目外，不加入公开白名单。忽略规则不会清除历史提交，也不会自动清除已跟踪文件中的个人信息。
 - Agent 和浏览器工具会读取所需资料，数据处理取决于所用服务与配置。
-- Skill 默认不代替用户点击网站的保存、下一步或提交，也不默认修改个人资料或投递跟进表。经用户授权更新跟进表时，默认不生成备份；仅在用户明确要求时创建。验证码、协议及最终提交由用户处理。
+- 保存、下一步、预览、附件和跟进表操作以当前指令或本机配置中的已确认授权为准，授权范围内不逐次询问；未经授权不执行。默认不修改长期个人资料，不生成跟进表备份。验证码与缺少事实依据的声明由用户处理；最终提交、投递和邮件发送须本次明确授权。
 - 本项目以 Codex Skill 和 Node.js 脚本协同工作；`extension/` 是脚本使用的模块集合，不是可独立安装的 Chrome 扩展。
 
 ## 验证与边界
@@ -149,7 +149,7 @@ node tools/jobfill-batch-cli.js --request-file data/request.json
 python -B tests/test_job_tracker.py
 ```
 
-本机个人资料与已确认偏好放在被 Git 忽略的 `data/` 中；公共 Skill 不包含这些资料。个人流程使用 `data/personal-workflow.md`，本机各 Agent 入口可通过 `tools/convert-skill-links.ps1` 转为指向它的软链接；需要 Windows 创建软链接的权限。
+本机个人资料与配置放在被 Git 忽略的 `data/` 中；所有用户共享同一份公开执行流程。本机配置使用 `data/personal-workflow.md`，只保存路径、偏好和已确认授权；本机各 Agent 入口可通过 `tools/convert-skill-links.ps1` 转为指向该配置的软链接，配置再引用共享 Skill。提交 Git 时只收录公开流程、工具和虚构示例，检查实际提交内容，无需另维护脱敏流程副本。
 
 ### 浏览器填写回归
 
